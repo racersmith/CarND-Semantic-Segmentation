@@ -24,16 +24,26 @@ def load_vgg(sess, vgg_path):
     :param vgg_path: Path to vgg folder, containing "variables/" and "saved_model.pb"
     :return: Tuple of Tensors from VGG model (image_input, keep_prob, layer3_out, layer4_out, layer7_out)
     """
-    # TODO: Implement function
-    #   Use tf.saved_model.loader.load to load the model and weights
+    # Saved VGG16 graph layer names
     vgg_tag = 'vgg16'
     vgg_input_tensor_name = 'image_input:0'
     vgg_keep_prob_tensor_name = 'keep_prob:0'
     vgg_layer3_out_tensor_name = 'layer3_out:0'
     vgg_layer4_out_tensor_name = 'layer4_out:0'
     vgg_layer7_out_tensor_name = 'layer7_out:0'
-    
-    return None, None, None, None, None
+
+    # Load saved graph
+    tf.saved_model.loader.load(sess, [vgg_tag], vgg_path)
+    graph = tf.get_default_graph()
+
+    # Extract specific layers by name
+    image_input = graph.get_tensor_by_name(vgg_input_tensor_name)
+    keep_prob = graph.get_tensor_by_name(vgg_keep_prob_tensor_name)
+    layer3_out = graph.get_tensor_by_name(vgg_layer3_out_tensor_name)
+    layer4_out = graph.get_tensor_by_name(vgg_layer4_out_tensor_name)
+    layer7_out = graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
+
+    return image_input, keep_prob, layer3_out, layer4_out, layer7_out
 tests.test_load_vgg(load_vgg, tf)
 
 
@@ -46,8 +56,32 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # TODO: Implement function
-    return None
+    # Layer Regularizer
+    l2_reg = tf.contrib.layers.l2_regularizer(1e-3)
+
+    # 1x1 Convolution after last VGG layer
+    flow = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, 1,
+                            padding='same',
+                            kernel_regularizer=l2_reg)
+
+    # First transpose convolution and skip connector
+    flow = tf.layers.conv2d_transpose(flow, num_classes, 4, 2,
+                                      padding='same',
+                                      kernel_regularizer=l2_reg)
+    flow = tf.add(flow, vgg_layer4_out)
+
+    # Second transpose convolution and skip connector
+    flow = tf.layers.conv2d_transpose(flow, num_classes, 4, 2,
+                                      padding='same',
+                                      kernel_regularizer=l2_reg)
+    flow = tf.add(flow, vgg_layer3_out)
+
+    # Final upsample
+    flow = tf.layers.conv2d_transpose(flow, num_classes, 16, 8,
+                                      padding='same',
+                                      kernel_regularizer=l2_reg)
+
+    return flow
 tests.test_layers(layers)
 
 
@@ -60,8 +94,15 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :param num_classes: Number of classes to classify
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
-    # TODO: Implement function
-    return None, None, None
+    # Flatten final layer
+    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+
+    # Loss Function
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, correct_label))
+
+    # Optimization Function
+    train_op = tf.train.AdamOptimizer(learning_rate)
+    return logits, train_op, cross_entropy_loss
 tests.test_optimize(optimize)
 
 
