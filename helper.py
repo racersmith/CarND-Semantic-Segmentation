@@ -10,7 +10,7 @@ import tensorflow as tf
 from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
-
+from scipy import ndimage
 
 class DLProgress(tqdm):
     last_block = 0
@@ -85,7 +85,11 @@ def gen_batch_function(data_folder, image_shape):
                 gt_image_file = label_paths[os.path.basename(image_file)]
 
                 image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+                image = preprocess_image(image)
                 gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
+
+                # Augment training data
+                image, gt_image = augment_image(image, gt_image)
 
                 gt_bg = np.all(gt_image == background_color, axis=2)
                 gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
@@ -110,8 +114,8 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
     :return: Output for for each test image
     """
     for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
-        image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
-
+        og_image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+        image = preprocess_image(og_image)
         im_softmax = sess.run(
             [tf.nn.softmax(logits)],
             {keep_prob: 1.0, image_pl: [image]})
@@ -119,7 +123,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
         segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
         mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
         mask = scipy.misc.toimage(mask, mode="RGBA")
-        street_im = scipy.misc.toimage(image)
+        street_im = scipy.misc.toimage(og_image)
         street_im.paste(mask, box=None, mask=mask)
 
         yield os.path.basename(image_file), np.array(street_im)
@@ -138,3 +142,28 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
         sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
     for name, image in image_outputs:
         scipy.misc.imsave(os.path.join(output_dir, name), image)
+
+
+def preprocess_image(image):
+    image = ndimage.gaussian_filter(image, 1)
+    # image = (image - np.mean(image))/np.std(image)
+    # image = image / (np.max(image)-np.min(image))
+    return image
+
+
+def augment_image(image, label):
+    # Randomly flip left to right
+    flip = np.random.randint(0,2)
+    if flip:
+        image = np.fliplr(image)
+        label = np.fliplr(label)
+
+    # Random rotation
+    rotation = np.random.uniform(-15, 15)
+    image = scipy.misc.imrotate(image, rotation)
+    label = scipy.misc.imrotate(label, rotation)
+
+    # Random blur
+    blur = np.random.uniform(0.1, 5.0) # standard deviation of kernel
+    image = ndimage.gaussian_filter(image, blur)
+    return image, label
