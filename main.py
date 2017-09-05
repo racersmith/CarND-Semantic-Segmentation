@@ -171,7 +171,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
         for batch, (image, label) in enumerate(get_batches_fn(batch_size)):
             feed_dict = {input_image: image,
                          correct_label: label,
-                         keep_prob: 0.5,
+                         keep_prob: 1.0,
                          learning_rate: 0.0001}
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed_dict)
             print("Epoch: {:<3} Batch: {:<5} Loss: {:<10.4f} Running Time: {:<.1f} seconds".format(epoch+1,
@@ -198,7 +198,7 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 17
+        epochs = 21
         batch_size = 7
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
