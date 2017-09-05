@@ -164,6 +164,6 @@ def augment_image(image, label):
     label = scipy.misc.imrotate(label, rotation)
 
     # Random blur
-    blur = np.random.uniform(0.1, 5.0) # standard deviation of kernel
+    blur = np.random.uniform(0.1, 3.0) # standard deviation of kernel
     image = ndimage.gaussian_filter(image, blur)
     return image, label

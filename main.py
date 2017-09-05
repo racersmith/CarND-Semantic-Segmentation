@@ -56,7 +56,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # Layer Regularizer
+    # Layer regularizer
     l2_reg = tf.contrib.layers.l2_regularizer(1e-3)
     # l2_reg = None
 
@@ -92,10 +92,32 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # Skip connection to layer 3
     flow = tf.add(flow, layer3_1x1)
 
-    # Final upsample
-    flow = tf.layers.conv2d_transpose(flow, num_classes, 16, strides=8,
+    # Final upsample, typical fcn8 output
+    fcn8 = tf.layers.conv2d_transpose(flow, num_classes, 16, strides=8,
                                       padding='same',
                                       kernel_regularizer=l2_reg)
+
+    # Add a few convolutional layers to help fill in and remove the noise
+    flow = tf.layers.conv2d(fcn8, 2*num_classes, 3, 1,
+                            padding='same',
+                            activation=tf.nn.elu,
+                            # activation=tf.nn.tanh,
+                            kernel_regularizer=l2_reg)
+
+    flow = tf.layers.conv2d(flow, num_classes, 5, 1,
+                            padding='same',
+                            activation=tf.nn.elu,
+                            # activation=tf.nn.tanh,
+                            kernel_regularizer=l2_reg)
+
+    # Skip connector to the fcn8 output
+    flow = tf.add(fcn8, flow)
+
+    flow = tf.layers.conv2d(flow, num_classes, 7, strides=1,
+                            padding='same',
+                            activation=tf.nn.elu,
+                            # activation=tf.nn.tanh,
+                            kernel_regularizer=l2_reg)
 
     return flow
 tests.test_layers(layers)
@@ -143,8 +165,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
 
-    sess.run(tf.global_variables_initializer())
-
     # Start a timer
     batch_start = time.time()
     for epoch in range(epochs):
@@ -152,7 +172,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             feed_dict = {input_image: image,
                          correct_label: label,
                          keep_prob: 0.5,
-                         learning_rate: 0.0005}
+                         learning_rate: 0.0001}
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed_dict)
             print("Epoch: {:<3} Batch: {:<5} Loss: {:<10.4f} Running Time: {:<.1f} seconds".format(epoch+1,
                                                                                                   batch+1,
@@ -178,7 +198,7 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 15
+        epochs = 17
         batch_size = 7
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
@@ -196,8 +216,9 @@ def run():
         layer_output = layers(layer3_out, layer4_out, layer7_out, num_classes)
         logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
 
-        # Initialize local varaibles for mean_iou
+        # Initialize
         sess.run(tf.local_variables_initializer())
+        sess.run(tf.global_variables_initializer())
 
         # Train NN using the train_nn function
         train_nn(sess,
