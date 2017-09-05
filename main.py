@@ -57,8 +57,8 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # Layer regularizer
-    l2_reg = tf.contrib.layers.l2_regularizer(1e-3)
-    # l2_reg = None
+    # l2_reg = tf.contrib.layers.l2_regularizer(1e-3)
+    l2_reg = None
 
     # 1x1 Convolution after last VGG layer to reshape depth
     flow = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides=1,
@@ -199,7 +199,7 @@ def run():
     with tf.Session() as sess:
         # Hyperparameters
         epochs = 21
-        batch_size = 7
+        batch_size = 40
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
 
