@@ -110,16 +110,16 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                                       kernel_regularizer=l2_reg)
 
     # Add a few convolutional layers to help fill in and remove the noise
-    flow = tf.layers.conv2d(fcn8, 2*num_classes, 3, 1,
+    flow = tf.layers.conv2d(fcn8, 2*num_classes, 5, 1,
                             padding='same',
                             # activation=tf.nn.elu,
                             activation=tf.nn.tanh,
                             kernel_regularizer=l2_reg)
 
-    flow = tf.layers.conv2d(flow, num_classes, 5, 1,
+    flow = tf.layers.conv2d(flow, num_classes, 7, 1,
                             padding='same',
                             # activation=tf.nn.elu,
-                            activation=tf.nn.tanh,
+                            # activation=tf.nn.tanh,
                             kernel_regularizer=l2_reg)
 
     # Skip connector to the fcn8 output
@@ -130,7 +130,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                             activation=tf.nn.tanh,
                             kernel_regularizer=l2_reg)
 
-    flow = tf.layers.conv2d(flow, num_classes, 7, strides=1,
+    flow = tf.layers.conv2d(flow, num_classes, 9, strides=1,
                             padding='same',
                             # activation=tf.nn.elu,
                             activation=tf.nn.tanh,
@@ -189,7 +189,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             feed_dict = {input_image: image,
                          correct_label: label,
                          keep_prob: 1.0,
-                         learning_rate: 0.00005}
+                         learning_rate: 0.0001}
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed_dict)
             print("Epoch: {:<3} Batch: {:<5} Loss: {:<10.4f} Running Time: {:<.1f} seconds".format(epoch+1,
                                                                                                   batch+1,
@@ -216,7 +216,7 @@ def run():
     with tf.Session() as sess:
         # Hyperparameters
         epochs = 50
-        batch_size = 7
+        batch_size = 5
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
 
