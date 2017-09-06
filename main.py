@@ -198,8 +198,8 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 21
-        batch_size = 40
+        epochs = 25
+        batch_size = 5
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
 
