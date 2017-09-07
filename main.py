@@ -56,85 +56,60 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
+    # depth upsample for inner layers
+    C = 2
+
     # Layer regularizer
     l2_reg = tf.contrib.layers.l2_regularizer(0.001)
-    # l2_reg = None
 
     # 1x1 Convolution after last VGG layer to reshape depth
-    flow = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides=1,
+    flow = tf.layers.conv2d(vgg_layer7_out, C*num_classes, 1, strides=1,
                             padding='same',
                             kernel_regularizer=l2_reg)
 
     # First transpose convolution
-    flow = tf.layers.conv2d_transpose(flow, num_classes, 4, strides=2,
+    flow = tf.layers.conv2d_transpose(flow, C*num_classes, 4, strides=2,
                                       padding='same',
                                       kernel_regularizer=l2_reg)
 
     # Reshape depth with 1x1 convolution before skip connection
-    layer4_1x1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides=1,
+    layer4_1x1 = tf.layers.conv2d(vgg_layer4_out, C*num_classes, 1, strides=1,
                                   padding='same',
                                   kernel_regularizer=l2_reg)
 
     # Skip connection to layer 4
     flow = tf.add(flow, layer4_1x1)
-    # flow = tf.concat([flow, layer4_1x1], axis=3)
-    # flow = tf.layers.conv2d(flow, num_classes, 1, 1,
-    #                         padding='same',
-    #                         # activation=tf.nn.elu,
-    #                         activation=tf.nn.tanh,
-    #                         kernel_regularizer=l2_reg)
-
 
     # Second transpose convolution
-    flow = tf.layers.conv2d_transpose(flow, num_classes, 4, strides=2,
+    flow = tf.layers.conv2d_transpose(flow, C*num_classes, 4, strides=2,
                                       padding='same',
                                       kernel_regularizer=l2_reg)
 
     # Reshape depth with 1x1 convolution before skip connection
-    layer3_1x1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=1,
+    layer3_1x1 = tf.layers.conv2d(vgg_layer3_out, C*num_classes, 1, strides=1,
                                   padding='same',
                                   kernel_regularizer=l2_reg)
 
     # Skip connection to layer 3
     flow = tf.add(flow, layer3_1x1)
-    # flow = tf.concat([flow, layer3_1x1], axis=3)
-    # flow = tf.layers.conv2d(flow, num_classes, 1, 1,
-    #                         padding='same',
-    #                         # activation=tf.nn.elu,
-    #                         activation=tf.nn.tanh,
-    #                         kernel_regularizer=l2_reg)
 
     # Final upsample, typical fcn8 output
-    fcn8 = tf.layers.conv2d_transpose(flow, num_classes, 16, strides=8,
+    fcn8 = tf.layers.conv2d_transpose(flow, C*num_classes, 16, strides=8,
                                       padding='same',
                                       kernel_regularizer=l2_reg)
 
-    # Add a few convolutional layers to help fill in and remove the noise
-    flow = tf.layers.conv2d(fcn8, num_classes, 3, 1,
+    # Add a additional convolutional layers to help deal with noise in the classification.
+    flow = tf.layers.conv2d(fcn8, C*num_classes, 4, 1,
                             padding='same',
-                            # activation=tf.nn.elu,
-                            activation=tf.nn.tanh,
+                            activation=tf.nn.elu,
+                            # activation=tf.nn.tanh,
                             kernel_regularizer=l2_reg)
     #
-    flow = tf.layers.conv2d(flow, num_classes, 5, 1,
+    flow = tf.layers.conv2d(flow, num_classes, 4, 1,
                             padding='same',
-                            # activation=tf.nn.elu,
-                            activation=tf.nn.tanh,
+                            activation=tf.nn.elu,
+                            # activation=tf.nn.tanh,
                             kernel_regularizer=l2_reg)
-
-    # Skip connector to the fcn8 output
-    # flow = tf.add(fcn8, flow)
-    # flow = tf.concat([flow, fcn8], axis=3)
-    # flow = tf.layers.conv2d(flow, num_classes, 1, 1,
-    #                         padding='same',
-    #                         activation=tf.nn.tanh,
-    #                         kernel_regularizer=l2_reg)
-
-    # flow = tf.layers.conv2d(flow, num_classes, 3, strides=1,
-    #                         padding='same',
-    #                         # activation=tf.nn.elu,
-    #                         activation=tf.nn.tanh,
-    #                         kernel_regularizer=l2_reg)
 
     return flow
 tests.test_layers(layers)
@@ -215,8 +190,8 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 25
-        batch_size = 15
+        epochs = 6
+        batch_size = 5
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
 
