@@ -190,8 +190,8 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 12
-        batch_size = 5
+        epochs = 8
+        batch_size = 7
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
 
