@@ -63,17 +63,17 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     l2_reg = tf.contrib.layers.l2_regularizer(0.001)
 
     # 1x1 Convolution after last VGG layer to reshape depth
-    flow = tf.layers.conv2d(vgg_layer7_out, C*num_classes, 1, strides=1,
+    flow = tf.layers.conv2d(vgg_layer7_out, C * num_classes, 1, strides=1,
                             padding='same',
                             kernel_regularizer=l2_reg)
 
     # First transpose convolution
-    flow = tf.layers.conv2d_transpose(flow, C*num_classes, 4, strides=2,
+    flow = tf.layers.conv2d_transpose(flow, C * num_classes, 4, strides=2,
                                       padding='same',
                                       kernel_regularizer=l2_reg)
 
     # Reshape depth with 1x1 convolution before skip connection
-    layer4_1x1 = tf.layers.conv2d(vgg_layer4_out, C*num_classes, 1, strides=1,
+    layer4_1x1 = tf.layers.conv2d(vgg_layer4_out, C * num_classes, 1, strides=1,
                                   padding='same',
                                   kernel_regularizer=l2_reg)
 
@@ -81,12 +81,12 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     flow = tf.add(flow, layer4_1x1)
 
     # Second transpose convolution
-    flow = tf.layers.conv2d_transpose(flow, C*num_classes, 4, strides=2,
+    flow = tf.layers.conv2d_transpose(flow, C * num_classes, 4, strides=2,
                                       padding='same',
                                       kernel_regularizer=l2_reg)
 
     # Reshape depth with 1x1 convolution before skip connection
-    layer3_1x1 = tf.layers.conv2d(vgg_layer3_out, C*num_classes, 1, strides=1,
+    layer3_1x1 = tf.layers.conv2d(vgg_layer3_out, C * num_classes, 1, strides=1,
                                   padding='same',
                                   kernel_regularizer=l2_reg)
 
@@ -94,18 +94,18 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     flow = tf.add(flow, layer3_1x1)
 
     # Final upsample, typical fcn8 output
-    fcn8 = tf.layers.conv2d_transpose(flow, C*num_classes, 16, strides=8,
+    fcn8 = tf.layers.conv2d_transpose(flow, C * num_classes, 16, strides=8,
                                       padding='same',
                                       kernel_regularizer=l2_reg)
 
     # Add a additional convolutional layers to help deal with noise in the classification.
-    flow = tf.layers.conv2d(fcn8, C*num_classes, 4, 1,
+    flow = tf.layers.conv2d(fcn8, num_classes, 3, 1,
                             padding='same',
                             activation=tf.nn.elu,
                             # activation=tf.nn.tanh,
                             kernel_regularizer=l2_reg)
     #
-    flow = tf.layers.conv2d(flow, num_classes, 4, 1,
+    flow = tf.layers.conv2d(flow, num_classes, 3, 1,
                             padding='same',
                             activation=tf.nn.elu,
                             # activation=tf.nn.tanh,
@@ -190,7 +190,7 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 6
+        epochs = 12
         batch_size = 5
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
