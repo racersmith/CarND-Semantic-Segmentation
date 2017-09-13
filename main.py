@@ -57,25 +57,32 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # depth upsample for inner layers
-    C = 2
+    C = 1
 
-    # Layer regularizer
+    # Layer Regularizer
     l2_reg = tf.contrib.layers.l2_regularizer(0.001)
+
+    # Weight Initializer
+    weight_init = tf.contrib.layers.xavier_initializer(uniform=True, seed=None, dtype=tf.float32)
+
 
     # 1x1 Convolution after last VGG layer to reshape depth
     flow = tf.layers.conv2d(vgg_layer7_out, C * num_classes, 1, strides=1,
                             padding='same',
-                            kernel_regularizer=l2_reg)
+                            kernel_regularizer=l2_reg,
+                            kernel_initializer=weight_init)
 
     # First transpose convolution
     flow = tf.layers.conv2d_transpose(flow, C * num_classes, 4, strides=2,
                                       padding='same',
-                                      kernel_regularizer=l2_reg)
+                                      kernel_regularizer=l2_reg,
+                                      kernel_initializer=weight_init)
 
     # Reshape depth with 1x1 convolution before skip connection
     layer4_1x1 = tf.layers.conv2d(vgg_layer4_out, C * num_classes, 1, strides=1,
                                   padding='same',
-                                  kernel_regularizer=l2_reg)
+                                  kernel_regularizer=l2_reg,
+                                  kernel_initializer=weight_init)
 
     # Skip connection to layer 4
     flow = tf.add(flow, layer4_1x1)
@@ -83,33 +90,36 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # Second transpose convolution
     flow = tf.layers.conv2d_transpose(flow, C * num_classes, 4, strides=2,
                                       padding='same',
-                                      kernel_regularizer=l2_reg)
+                                      kernel_regularizer=l2_reg,
+                                      kernel_initializer=weight_init)
 
     # Reshape depth with 1x1 convolution before skip connection
     layer3_1x1 = tf.layers.conv2d(vgg_layer3_out, C * num_classes, 1, strides=1,
                                   padding='same',
-                                  kernel_regularizer=l2_reg)
+                                  kernel_regularizer=l2_reg,
+                                  kernel_initializer=weight_init)
 
     # Skip connection to layer 3
     flow = tf.add(flow, layer3_1x1)
 
     # Final upsample, typical fcn8 output
-    fcn8 = tf.layers.conv2d_transpose(flow, C * num_classes, 16, strides=8,
+    flow = tf.layers.conv2d_transpose(flow, C * num_classes, 16, strides=8,
                                       padding='same',
-                                      kernel_regularizer=l2_reg)
+                                      kernel_regularizer=l2_reg,
+                                      kernel_initializer=weight_init)
 
-    # Add a additional convolutional layers to help deal with noise in the classification.
-    flow = tf.layers.conv2d(fcn8, num_classes, 3, 1,
-                            padding='same',
-                            activation=tf.nn.elu,
-                            # activation=tf.nn.tanh,
-                            kernel_regularizer=l2_reg)
+    # # Add a additional convolutional layers to help deal with noise in the classification.
+    # flow = tf.layers.conv2d(flow, num_classes, 5, 1,
+    #                         padding='same',
+    #                         activation=tf.nn.elu,
+    #                         kernel_regularizer=l2_reg,
+    #                         kernel_initializer=weight_init)
     #
-    flow = tf.layers.conv2d(flow, num_classes, 3, 1,
-                            padding='same',
-                            activation=tf.nn.elu,
-                            # activation=tf.nn.tanh,
-                            kernel_regularizer=l2_reg)
+    # flow = tf.layers.conv2d(flow, num_classes, 5, 1,
+    #                         padding='same',
+    #                         activation=tf.nn.elu,
+    #                         kernel_regularizer=l2_reg,
+    #                         kernel_initializer=weight_init)
 
     return flow
 tests.test_layers(layers)
@@ -164,7 +174,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             feed_dict = {input_image: image,
                          correct_label: label,
                          keep_prob: 1.0,
-                         learning_rate: 0.0005}
+                         learning_rate: 0.0001}
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed_dict)
             print("Epoch: {:<3} Batch: {:<5} Loss: {:<10.4f} Running Time: {:<.1f} seconds".format(epoch+1,
                                                                                                   batch+1,
@@ -190,8 +200,8 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 8
-        batch_size = 7
+        epochs = 6
+        batch_size = 1
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
 
@@ -199,9 +209,6 @@ def run():
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
         get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
-
-        # OPTIONAL: Augment Images for better results
-        # https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # Build NN using load_vgg, layers, and optimize function
         input_image, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(sess, vgg_path)

@@ -7,7 +7,7 @@ This represents the encoder portion of the network and is the driving force behi
 However, the spatial information is lost during the size reduction of the convolutions and max pooling layers.
 The spatial information of the classification is gained through transpose convolutions and skip connectors to earlier
 layers of VGG16 to gain back spatial information of the classification.  To improve noise and generate a more distinct
-boundary, two additional convolutional layers were added.
+boundary, two additional convolution layers were added.
 
 ### Setup
 ##### Frameworks and Packages
