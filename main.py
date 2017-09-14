@@ -57,7 +57,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # depth upsample for inner layers
-    C = 1
+    C = 2
 
     # Layer Regularizer
     l2_reg = tf.contrib.layers.l2_regularizer(0.001)
@@ -108,18 +108,18 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                                       kernel_regularizer=l2_reg,
                                       kernel_initializer=weight_init)
 
-    # # Add a additional convolutional layers to help deal with noise in the classification.
-    # flow = tf.layers.conv2d(flow, num_classes, 5, 1,
-    #                         padding='same',
-    #                         activation=tf.nn.elu,
-    #                         kernel_regularizer=l2_reg,
-    #                         kernel_initializer=weight_init)
-    #
-    # flow = tf.layers.conv2d(flow, num_classes, 5, 1,
-    #                         padding='same',
-    #                         activation=tf.nn.elu,
-    #                         kernel_regularizer=l2_reg,
-    #                         kernel_initializer=weight_init)
+    # Add a additional convolutional layers to help deal with noise in the classification.
+    flow = tf.layers.conv2d(flow, num_classes, 5, 1,
+                            padding='same',
+                            activation=tf.nn.elu,
+                            kernel_regularizer=l2_reg,
+                            kernel_initializer=weight_init)
+
+    flow = tf.layers.conv2d(flow, num_classes, 5, 1,
+                            padding='same',
+                            activation=tf.nn.elu,
+                            kernel_regularizer=l2_reg,
+                            kernel_initializer=weight_init)
 
     return flow
 tests.test_layers(layers)
@@ -200,7 +200,7 @@ def run():
 
     with tf.Session() as sess:
         # Hyperparameters
-        epochs = 6
+        epochs = 12
         batch_size = 1
         learning_rate = tf.placeholder(tf.float32)
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes])
