@@ -1,4 +1,7 @@
 # Semantic Segmentation
+
+![Example Segmentation](runs/1505350706.1526535/umm_000034.png)
+
 ### Introduction
 In this project, the road is identified at the pixel level using a Fully Convolutional Network, FCN.
 The FCN used here is a modification of the FCN8 which takes the venerable VGG16 and replaces the fully connected layers
